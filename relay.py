@@ -6,6 +6,9 @@ import logging
 log = logging.getLogger(__name__)
 loop = None
 
+RELAY_WAIT_PORT = 8001
+RELAY_ACTION_PORT = 8002
+
 def accept_client(client_reader, client_writer):
 
     log.info("New Connection")
@@ -19,23 +22,23 @@ class EchoClient(asyncio.Protocol):
 
     def connection_made(self, transport):
         self.transport = transport
-        print('connection made:', self)
+        log.info('connection made:', self)
 
     def data_received(self, data):
         self.writer.write(data)
 
     def eof_received(self):
-        print("Got EOF from server connection")
+        log.info("Got EOF from server connection")
 
     def connection_lost(self, exc):
-        print("Got close from server connection")
+        log.info("Got close from server connection")
         try:
             self.writer.write_eof()
         except Exception:
             pass
 
 def conn_lost(tr):
-    print("Got close from client connection")
+    log.info("Got close from client connection")
     try:
         tr.write_eof()
     except Exception:
@@ -52,7 +55,7 @@ async def handle_client(client_reader, client_writer):
         pass
 
     if data is None:
-        log.info("opening ssh")
+        log.info("opening RELAY_WAIT_PORT")
 
         try:
             _, protocol = await asyncio.ensure_future(loop.create_connection(EchoClient, "127.0.0.1", 8002)) # await asyncio.open_connection("127.0.0.1", 8002)
@@ -76,12 +79,12 @@ async def handle_client(client_reader, client_writer):
             pass
 
     if protocol is None:
-        print("Can't connect to the server")
+        log.error("Can't connect to the server")
         client_writer.write_eof()
         return
 
     client_writer._protocol.data_received = lambda data: protocol.transport.write(data)
-    client_writer._protocol.eof_received = lambda : print("Got EOF from client connection")
+    client_writer._protocol.eof_received = lambda : log.info("Got EOF from client connection")
     client_writer._protocol.connection_lost = lambda exc: conn_lost(protocol.transport)
 
 def main():
