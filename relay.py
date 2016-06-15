@@ -16,7 +16,6 @@ def accept_client(client_reader, client_writer):
 
 class EchoClient(asyncio.Protocol):
 
-    #message = 'This is the message. It will be echoed.'
     writer = None
     transport = None
 
@@ -47,6 +46,7 @@ def conn_lost(tr):
 
 async def handle_client(client_reader, client_writer):
     data = None
+    port = None
     protocol = None
 
     try:
@@ -56,27 +56,20 @@ async def handle_client(client_reader, client_writer):
 
     if data is None:
         log.info("opening RELAY_WAIT_PORT")
-
-        try:
-            _, protocol = await asyncio.ensure_future(loop.create_connection(EchoClient, "127.0.0.1", RELAY_WAIT_PORT))
-            protocol.writer = client_writer
-
-            client_writer._protocol.other = protocol
-
-        except Exception:
-            pass
-
+        port = RELAY_WAIT_PORT;
     else:
         log.info("opening RELAY_ACTION_PORT")
+        port = RELAY_ACTION_PORT
 
-        try:
-            _, protocol = await asyncio.ensure_future(loop.create_connection(EchoClient, "127.0.0.1", RELAY_ACTION_PORT))
-            protocol.writer = client_writer
+    try:
+        _, protocol = await asyncio.ensure_future(loop.create_connection(EchoClient, "127.0.0.1", port))
+        protocol.writer = client_writer
+        if data is not None:
             protocol.transport.write(data)
 
-            client_writer._protocol.other = protocol
-        except Exception:
-            pass
+        client_writer._protocol.other = protocol
+    except Exception:
+        pass
 
     if protocol is None:
         log.error("Can't connect to the server")
