@@ -58,7 +58,7 @@ async def handle_client(client_reader, client_writer):
         log.info("opening RELAY_WAIT_PORT")
 
         try:
-            _, protocol = await asyncio.ensure_future(loop.create_connection(EchoClient, "127.0.0.1", 8002)) # await asyncio.open_connection("127.0.0.1", 8002)
+            _, protocol = await asyncio.ensure_future(loop.create_connection(EchoClient, "127.0.0.1", RELAY_WAIT_PORT))
             protocol.writer = client_writer
 
             client_writer._protocol.other = protocol
@@ -67,10 +67,10 @@ async def handle_client(client_reader, client_writer):
             pass
 
     else:
-        log.info("opening vpn")
+        log.info("opening RELAY_ACTION_PORT")
 
         try:
-            _, protocol = await asyncio.ensure_future(loop.create_connection(EchoClient, "127.0.0.1", 8001)) # await asyncio.open_connection("127.0.0.1", 8001)
+            _, protocol = await asyncio.ensure_future(loop.create_connection(EchoClient, "127.0.0.1", RELAY_ACTION_PORT))
             protocol.writer = client_writer
             protocol.transport.write(data)
 
@@ -84,7 +84,7 @@ async def handle_client(client_reader, client_writer):
         return
 
     client_writer._protocol.data_received = lambda data: protocol.transport.write(data)
-    client_writer._protocol.eof_received = lambda : log.info("Got EOF from client connection")
+    client_writer._protocol.eof_received = lambda: log.info("Got EOF from client connection")
     client_writer._protocol.connection_lost = lambda exc: conn_lost(protocol.transport)
 
 def main():
