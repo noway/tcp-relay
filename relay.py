@@ -11,7 +11,6 @@ RELAY_ACTION_PORT = 8002
 
 
 def accept_client(client_reader, client_writer):
-
     log.info("New Connection")
     task = asyncio.Task(handle_client(client_reader, client_writer))
 
@@ -23,7 +22,7 @@ class EchoClient(asyncio.Protocol):
 
     def connection_made(self, transport):
         self.transport = transport
-        log.info('Connection made:', self)
+        log.info('Connection made: {0}'.format(self))
 
     def data_received(self, data):
         self.writer.write(data)
