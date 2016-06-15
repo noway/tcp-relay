@@ -2,6 +2,14 @@
 
 import asyncio
 import logging
+import argparse
+
+import sys
+try:
+    import signal
+except ImportError:
+    signal = None
+
 
 log = logging.getLogger(__name__)
 loop = None
@@ -87,15 +95,29 @@ async def handle_client(client_reader, client_writer):
     client_protocol.connection_lost = lambda exc: conn_lost(protocol.transport)
 
 
-def main():
-    global loop
-    loop = asyncio.get_event_loop()
-    f = asyncio.start_server(accept_client, host=None, port=8000)
-    loop.run_until_complete(f)
-    loop.run_forever()
+
+ARGS = argparse.ArgumentParser(description="TCP relay.")
+
+ARGS.add_argument(
+    '--port', action="store", dest='port',
+    default=8000, type=int, help='Output port')
+
+ARGS.add_argument(
+    '--waiter', action="store", dest='wait_port',
+    default=8001, help='Port of waiter protocol')
+
+ARGS.add_argument(
+    '--actioner', action="store", dest='action_port',
+    default=8002, help='Port of actioner protocol')
 
 
 if __name__ == '__main__':
+    args = ARGS.parse_args()
+
+    RELAY_ACTION_PORT = args.action_port
+    RELAY_WAIT_PORT = args.wait_port
+
+
     log = logging.getLogger("")
     formatter = logging.Formatter("%(asctime)s %(levelname)s " +
                                   "[%(module)s:%(lineno)d] %(message)s")
@@ -106,4 +128,14 @@ if __name__ == '__main__':
 
     ch.setFormatter(formatter)
     log.addHandler(ch)
-    main()
+
+    # start the server
+
+    loop = asyncio.get_event_loop()
+
+    if signal is not None and sys.platform != 'win32':
+        loop.add_signal_handler(signal.SIGINT, loop.stop)
+
+    f = asyncio.start_server(accept_client, host=None, port=args.port)
+    loop.run_until_complete(f)
+    loop.run_forever()
