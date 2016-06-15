@@ -110,6 +110,10 @@ ARGS.add_argument(
     '--actioner', action="store", dest='action_port',
     default=8002, help='Port of actioner protocol')
 
+ARGS.add_argument(
+    '--quiet', action="store_true", dest='quiet',
+    default=False, help="Don't show debug info")
+
 
 if __name__ == '__main__':
     args = ARGS.parse_args()
@@ -122,9 +126,10 @@ if __name__ == '__main__':
     formatter = logging.Formatter("%(asctime)s %(levelname)s " +
                                   "[%(module)s:%(lineno)d] %(message)s")
     # setup console logging
-    log.setLevel(logging.DEBUG)
+
+    log.setLevel(logging.ERROR if args.quiet else logging.DEBUG)
     ch = logging.StreamHandler()
-    ch.setLevel(logging.DEBUG)
+    ch.setLevel(logging.ERROR if args.quiet else logging.DEBUG)
 
     ch.setFormatter(formatter)
     log.addHandler(ch)
