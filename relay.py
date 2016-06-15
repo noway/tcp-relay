@@ -19,12 +19,7 @@ RELAY_WAIT_PORT = 8001
 RELAY_ACTION_PORT = 8002
 
 
-def accept_client(client_reader, client_writer):
-    log.info("New Connection")
-    task = asyncio.Task(handle_client(client_reader, client_writer))
-
-
-class EchoClient(asyncio.Protocol):
+class ServerRetranslator(asyncio.Protocol):
     """Handler for server"""
 
     writer = None
@@ -48,12 +43,9 @@ class EchoClient(asyncio.Protocol):
             pass
 
 
-def conn_lost(tr):
-    log.info("Got close from client")
-    try:
-        tr.write_eof()
-    except Exception:
-        pass
+def accept_client(client_reader, client_writer):
+    log.info("New Connection")
+    task = asyncio.Task(handle_client(client_reader, client_writer))
 
 
 async def handle_client(client_reader, client_writer):
@@ -76,7 +68,7 @@ async def handle_client(client_reader, client_writer):
 
     try:
         _, protocol = await asyncio.ensure_future(
-            loop.create_connection(EchoClient, "127.0.0.1", port))
+            loop.create_connection(ServerRetranslator, "127.0.0.1", port))
 
         protocol.writer = client_writer
         client_protocol.other = protocol
@@ -92,10 +84,16 @@ async def handle_client(client_reader, client_writer):
         client_writer.write_eof()
         return
 
+    def conn_lost(tr):
+        log.info("Got close from client")
+        try:
+            tr.write_eof()
+        except Exception:
+            pass
+
     client_protocol.data_received = lambda data: protocol.transport.write(data)
     client_protocol.eof_received = lambda: log.info("Got EOF from client")
     client_protocol.connection_lost = lambda exc: conn_lost(protocol.transport)
-
 
 
 ARGS = argparse.ArgumentParser(description="TCP relay.")
