@@ -121,7 +121,6 @@ if __name__ == '__main__':
     RELAY_ACTION_PORT = args.action_port
     RELAY_WAIT_PORT = args.wait_port
 
-
     log = logging.getLogger("")
     formatter = logging.Formatter("%(asctime)s %(levelname)s " +
                                   "[%(module)s:%(lineno)d] %(message)s")
