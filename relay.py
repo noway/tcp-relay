@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""TCP relay based on 1-second wait (2 states)."""
 
 import asyncio
 import logging
@@ -24,6 +25,7 @@ def accept_client(client_reader, client_writer):
 
 
 class EchoClient(asyncio.Protocol):
+    """Handler for server"""
 
     writer = None
     transport = None
