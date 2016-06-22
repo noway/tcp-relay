@@ -18,23 +18,33 @@ loop = None
 RELAY_WAIT_PORT = 8001
 RELAY_ACTION_PORT = 8002
 
-
+maxc=40
 class ServerRetranslator(asyncio.Protocol):
     """Handler for server"""
 
     writer = None
     transport = None
+    reader = None
+    got_eof = False
 
     def connection_made(self, transport):
         self.transport = transport
         log.info('Connection made: {0}'.format(self))
 
     def data_received(self, data):
+        log.debug("server(%d b): %r"%(len(data),data[:maxc]))
+        if self.got_eof:
+            loggin.error("SERVER SEND AFTER EOF")
         self.writer.write(data)
 
     def eof_received(self):
+        self.got_eof = True
         log.info("Got EOF from server")
 
+        try:
+            self.writer.write_eof()
+        except Exception:
+            pass
     def connection_lost(self, exc):
         log.info("Got close from server")
         try:
@@ -49,51 +59,85 @@ def accept_client(client_reader, client_writer):
 
 
 async def handle_client(client_reader, client_writer):
-    data = None
+    data = b''
     port = None
     protocol = None
     client_protocol = client_writer._protocol
 
+    log.info(client_writer._transport._sock)
+
     try:
-        data = await asyncio.wait_for(client_reader.read(1), timeout=1.0)
+        if not client_reader._buffer:
+            await client_reader._wait_for_data('readuntil')#, timeout=5.0)
+        data = bytes(client_reader._buffer)
+        
+
+    #data = await asyncio.wait_for(client_reader.readline(), timeout=1.0)
     except Exception:
         pass
 
-    if data is None:
-        log.info("opening RELAY_WAIT_PORT")
+
+    log.info("heredat (%d b): %r" %(len(data),data))
+    if data.decode('cp437').startswith("SSH"): # assuming good old DOS days
+    #if data is not None:
+        log.info("opening RELAY_WAIT_PORT ssh")
         port = RELAY_WAIT_PORT
+        ip = "127.0.0.1"
     else:
-        log.info("opening RELAY_ACTION_PORT")
+        log.info("opening RELAY_ACTION_PORT vpn")
         port = RELAY_ACTION_PORT
+        ip = "10.0.42.2"
 
     try:
         _, protocol = await asyncio.ensure_future(
-            loop.create_connection(ServerRetranslator, "127.0.0.1", port))
+            loop.create_connection(ServerRetranslator, ip, port))
 
         protocol.writer = client_writer
+        protocol.reader = client_reader
         client_protocol.other = protocol
-
-        if data is not None:
-            protocol.transport.write(data)
 
     except Exception:
         pass
+
+    #if data != b'':
+    #    log.info("sending heredat(%d b) back %r"%(len(data),data[:maxc]))
+    #    protocol.transport.write(data)
+
 
     if protocol is None:
         log.error("Can't connect to the server")
         client_writer.write_eof()
         return
 
+    got_eof = False
     def conn_lost(tr):
         log.info("Got close from client")
         try:
             tr.write_eof()
         except Exception:
             pass
+    def data_rec(data):
 
-    client_protocol.data_received = lambda data: protocol.transport.write(data)
-    client_protocol.eof_received = lambda: log.info("Got EOF from client")
+        log.debug("client (%d b): %r" % (len(data), data[:maxc]))
+        if got_eof:
+            log.error("writing to server from client AFTER EOF")
+        protocol.transport.write(data)
+    def handle_eof():
+        got_eof = True
+        try:
+            
+            protocol.transport.write_eof()
+        except Exception:
+            pass
+    client_protocol.data_received = lambda data: data_rec(data)
+    client_protocol.eof_received = lambda: handle_eof()
     client_protocol.connection_lost = lambda exc: conn_lost(protocol.transport)
+    data = bytes(client_reader._buffer)
+    if data != b'' :
+        log.info("sending heredat(%d b) back %r"%(len(data),data[:maxc]))
+        protocol.transport.write(data)
+
+
 
 
 ARGS = argparse.ArgumentParser(description="TCP relay.")
@@ -104,15 +148,15 @@ ARGS.add_argument(
 
 ARGS.add_argument(
     '--waiter', action="store", dest='wait_port',
-    default=8001, help='Port of waiter protocol')
+    default=8001, type=int, help='Port of waiter protocol')
 
 ARGS.add_argument(
     '--actioner', action="store", dest='action_port',
-    default=8002, help='Port of actioner protocol')
+    default=8002, type=int, help='Port of actioner protocol')
 
 ARGS.add_argument(
-    '--quiet', action="store_true", dest='quiet',
-    default=False, help="Don't show debug info")
+    '--quiet', action="store", dest='quiet',
+    default=0, type=int, help="Don't show debug info")
 
 
 if __name__ == '__main__':
@@ -125,10 +169,16 @@ if __name__ == '__main__':
     formatter = logging.Formatter("%(asctime)s %(levelname)s " +
                                   "[%(module)s:%(lineno)d] %(message)s")
     # setup console logging
+    lvl = logging.DEBUG
+    if args.quiet == 2:
+        log.error('ERROR ONLY')
+        lvl = logging.ERROR
+    if args.quiet == 1:
+        lvl = logging.INFO
 
-    log.setLevel(logging.ERROR if args.quiet else logging.DEBUG)
+    log.setLevel(lvl)
     ch = logging.StreamHandler()
-    ch.setLevel(logging.ERROR if args.quiet else logging.DEBUG)
+    ch.setLevel(lvl)
 
     ch.setFormatter(formatter)
     log.addHandler(ch)
