@@ -18,6 +18,9 @@ loop = None
 RELAY_WAIT_PORT = 8001
 RELAY_ACTION_PORT = 8002
 
+RELAY_WAIT_IP = "127.0.0.1"
+RELAY_ACTON_IP = "10.0.42.2"
+
 maxc=40
 class ServerRetranslator(asyncio.Protocol):
     """Handler for server"""
@@ -82,11 +85,11 @@ async def handle_client(client_reader, client_writer):
     #if data is not None:
         log.info("opening RELAY_WAIT_PORT ssh")
         port = RELAY_WAIT_PORT
-        ip = "127.0.0.1"
+        ip = RELAY_WAIT_IP
     else:
         log.info("opening RELAY_ACTION_PORT vpn")
         port = RELAY_ACTION_PORT
-        ip = "10.0.42.2"
+        ip = RELAY_ACTION_IP
 
     try:
         _, protocol = await asyncio.ensure_future(
