@@ -15,10 +15,10 @@ except ImportError:
 log = logging.getLogger(__name__)
 loop = None
 
-RELAY_WAIT_PORT = 8001
-RELAY_ACTION_PORT = 8002
+RELAY_MATCH_PORT = 22
+RELAY_OTHER_PORT = 443
 
-RELAY_WAIT_IP = "127.0.0.1"
+RELAY_MATCH_IP = "127.0.0.1"
 RELAY_ACTON_IP = "10.0.42.2"
 
 maxc=40
@@ -83,13 +83,13 @@ async def handle_client(client_reader, client_writer):
     log.info("heredat (%d b): %r" %(len(data),data))
     if data.decode('cp437').startswith("SSH"): # assuming good old DOS days
     #if data is not None:
-        log.info("opening RELAY_WAIT_PORT ssh")
-        port = RELAY_WAIT_PORT
-        ip = RELAY_WAIT_IP
+        log.info("opening RELAY_MATCH_PORT ssh")
+        port = RELAY_MATCH_PORT
+        ip = RELAY_MATCH_IP
     else:
-        log.info("opening RELAY_ACTION_PORT vpn")
-        port = RELAY_ACTION_PORT
-        ip = RELAY_ACTION_IP
+        log.info("opening RELAY_OTHER_PORT vpn")
+        port = RELAY_OTHER_PORT
+        ip = RELAY_OTHER_IP
 
     try:
         _, protocol = await asyncio.ensure_future(
@@ -150,12 +150,12 @@ ARGS.add_argument(
     default=8000, type=int, help='Output port')
 
 ARGS.add_argument(
-    '--waiter', action="store", dest='wait',
-    default='127.0.0.1:22', type=str, help='Adress of waiter protocol')
+    '--match', action="store", dest='match',
+    default='127.0.0.1:22', type=str, help='Adress of the matching protocol')
 
 ARGS.add_argument(
-    '--actioner', action="store", dest='action',
-    default='10.0.42.2:443', type=str, help='Adress of actioner protocol')
+    '--other', action="store", dest='other',
+    default='10.0.42.2:443', type=str, help='Adress of the other protocol')
 
 ARGS.add_argument(
     '--quiet', action="store", dest='quiet',
@@ -165,8 +165,8 @@ ARGS.add_argument(
 if __name__ == '__main__':
     args = ARGS.parse_args()
 
-    RELAY_ACTION_IP, RELAY_ACTION_PORT = args.action.split(':')
-    RELAY_WAIT_IP, RELAY_WAIT_PORT = args.wait.split(':')
+    RELAY_OTHER_IP, RELAY_OTHER_PORT = args.action.split(':')
+    RELAY_MATCH_IP, RELAY_MATCH_PORT = args.wait.split(':')
 
     log = logging.getLogger("")
     formatter = logging.Formatter("%(asctime)s %(levelname)s " +
