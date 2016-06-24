@@ -11,7 +11,7 @@ py3k
 ```bash
 $ nc -klp 8001
 $ nc -klp 8002
-$ ./tcp_relay
+$ ./tcp_relay --match 127.0.0.1:8001 --other 127.0.0.1:8002 --pattern 0x535348
 $ nc localhost 8000
 ```
 
