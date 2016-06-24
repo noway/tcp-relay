@@ -22,3 +22,8 @@ $ nc localhost 8000
 8002 _/
 
 ```
+
+## What is it again?
+
+An implementation of `rinetd` with the ability to have multiple rules for the same port based on the content of protocol
+
