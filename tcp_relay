@@ -81,7 +81,7 @@ async def handle_client(client_reader, client_writer):
 
     log.info("heredat (%d b): %r"  % (len(data), data))
 
-    if data.decode('cp437').startswith(MATCH_PATTERN): # assuming good old DOS days
+    if data.decode('cp437').startswith(MATCH_PATTERN.decode('cp437')): # assuming good old DOS days
         log.info("opening RELAY_MATCH_PORT ssh")
         port = RELAY_MATCH_PORT
         ip = RELAY_MATCH_IP
@@ -171,8 +171,7 @@ if __name__ == '__main__':
     RELAY_OTHER_IP, RELAY_OTHER_PORT = args.other.split(':')
     RELAY_MATCH_IP, RELAY_MATCH_PORT = args.match.split(':')
 
-    MATCH_PATTERN = args.pattern[2:] if args.pattern.startswith('0x')
-        else args.pattern
+    MATCH_PATTERN = args.pattern[2:] if args.pattern.startswith('0x') else args.pattern
     MATCH_PATTERN = codecs.decode(MATCH_PATTERN, 'hex')
 
     log = logging.getLogger("")
